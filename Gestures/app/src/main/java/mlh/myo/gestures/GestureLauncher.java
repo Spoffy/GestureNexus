@@ -36,7 +36,7 @@ public class GestureLauncher extends Activity {
             return;
         }
 
-        listener = new GestureListener(text);
+        listener = new GestureListener(this);
         System.out.println("Registering listener");
         hub.addListener(listener);
     }
@@ -95,5 +95,13 @@ public class GestureLauncher extends Activity {
         // Launch the ScanActivity to scan for Myos to connect to.
         Intent intent = new Intent(this, ScanActivity.class);
         startActivity(intent);
+    }
+
+    public TextView GetStatusText() {
+        return this.text;
+    }
+
+    public TextView GetDebugText() {
+        return (TextView) findViewById(R.id.debugText);
     }
 }
