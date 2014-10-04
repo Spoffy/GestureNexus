@@ -68,7 +68,9 @@ public class GestureListener extends AbstractDeviceListener {
                     this.pitchAdjust = this.pitch;
                     this.rollAdjust = this.roll;
                     parent.GetStatusText().setText("Calibrated");
+                    this.state = State.USE;
                 }
+                break;
             case FIST:
                 if (this.state == State.USE) {
                     if(this.isVertical()) {
@@ -81,7 +83,6 @@ public class GestureListener extends AbstractDeviceListener {
                 }
                 break;
             default:
-                parent.GetStatusText().setText("Other gesture");
                 break;
         }
         this.debugPose(pose);
@@ -124,7 +125,9 @@ public class GestureListener extends AbstractDeviceListener {
             this.pitch *= -1;
         }
 
-        //Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
+        if(this.state == State.USE) {
+            Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
+        }
     }
 
     public double getPitch() {
@@ -140,7 +143,7 @@ public class GestureListener extends AbstractDeviceListener {
     }
 
     private boolean isVertical() {
-        boolean isVert = this.InRange(this.getPitch(), this.angleTolerance);
+        boolean isVert = this.InRange(this.getPitch(), -90, this.angleTolerance);
         Log.w("GVert", isVert + "");
         return isVert;
     }
@@ -155,10 +158,11 @@ public class GestureListener extends AbstractDeviceListener {
         return angle;
     }
 
-    private boolean InRange(double value, double tolerance) {
+    private boolean InRange(double value, double point, double tolerance) {
         if (tolerance < 0 || tolerance > 180 ) throw new RuntimeException("Tolerance for Inrange should be < 180 and > 0");
-        double lowerBound = clampAngle(value - tolerance);
-        double upperBound = clampAngle(value + tolerance);
+        double lowerBound = clampAngle(point - tolerance);
+        double upperBound = clampAngle(point + tolerance);
+        point = clampAngle(point);
         value = clampAngle(value);
         Log.w("GestureNexus", "" + formatter.format(lowerBound) + " " + formatter.format(value) + " " + formatter.format(upperBound));
         return (value > lowerBound && value < upperBound) || (upperBound < lowerBound && (value < upperBound || value > lowerBound) );
