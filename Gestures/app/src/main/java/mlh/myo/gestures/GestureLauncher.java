@@ -2,8 +2,11 @@ package mlh.myo.gestures;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -20,6 +23,32 @@ public class GestureLauncher extends Activity {
     private TextView text;
     private DeviceListener listener;
 
+    private String number = "";
+
+    public void addDigit(int digit) {
+        number = number + digit;
+        updateNumberDisplay();
+    }
+
+    public void resetNumber() {
+        number = "";
+        updateNumberDisplay();
+    }
+
+    private void updateNumberDisplay() {
+        TextView numberDisplay = (TextView) findViewById(R.id.number);
+        numberDisplay.setText(this.number);
+    }
+
+    public void startCall() {
+        try {
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + this.number));
+            this.startActivity(callIntent);
+        } catch (ActivityNotFoundException e) {
+            Log.e("GestureNexus", "Call failed", e);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
