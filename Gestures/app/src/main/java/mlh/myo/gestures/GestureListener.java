@@ -32,6 +32,7 @@ public class GestureListener extends AbstractDeviceListener {
 
     private long lastPinkyTouch = 0;
     private Pose lastPose = Pose.UNKNOWN;
+    private long lastPoseStart = 0;
 
     private enum State {
         CALIBRATE,
@@ -84,10 +85,20 @@ public class GestureListener extends AbstractDeviceListener {
 
     @Override
     public void onPose(Myo myo, long timestamp, Pose pose) {
-        if(this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 2000) {
+        long lastPoseLength = System.currentTimeMillis() - this.lastPoseStart;
+        if(this.lastPose != Pose.REST && pose != Pose.REST) {
+            this.debugPose(pose);
+            this.lastPose = pose;
+            this.lastPoseStart = System.currentTimeMillis();
+            return;
+        }
+        this.debugPose(pose);
+        Log.w("G", ">: " + (System.currentTimeMillis() > lastPinkyTouch + 2000) + "T: " + System.currentTimeMillis() + "T: " + lastPinkyTouch);
+        if(this.state == State.DIALING && pose == Pose.REST && this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 2000) {
             parent.resetNumber();
             this.switchState(State.USE);
             parent.GetStatusText().setText("USE");
+            return;
         }
         switch (pose) {
             case WAVE_IN:
@@ -121,7 +132,7 @@ public class GestureListener extends AbstractDeviceListener {
                     } else if(this.state == State.DIALING) {
                         parent.startCall();
                         switchState(State.USE);
-                        parent.GetStatusText().setText("CALLING");
+                        parent.GetStatusText().setText("CALLING - USE");
                     }
                 }
                 this.lastPinkyTouch = System.currentTimeMillis();
@@ -129,14 +140,15 @@ public class GestureListener extends AbstractDeviceListener {
             case WAVE_OUT:
                 if(this.state == State.DIALING) {
                     parent.removeDigit();
-                    Log.w("Lol", "Removing digit");
+                    //
+                    //Log.w("Lol", "Removing digit");
                 }
                 break;
             default:
                 break;
         }
-        this.debugPose(pose);
         this.lastPose = pose;
+        this.lastPoseStart = System.currentTimeMillis();
     }
 
     private void debugPose(Pose pose) {
@@ -292,7 +304,7 @@ public class GestureListener extends AbstractDeviceListener {
 
     private boolean isVertical() {
         boolean isVert = this.InRange(this.getPitch(), -90, this.angleTolerance);
-        Log.w("GVert", isVert + "");
+        //Log.w("GVert", isVert + "");
         return isVert;
     }
 
