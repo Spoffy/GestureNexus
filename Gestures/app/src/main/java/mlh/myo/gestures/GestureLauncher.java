@@ -46,6 +46,12 @@ public class GestureLauncher extends Activity {
         numberDisplay.setText(this.number);
     }
 
+    public boolean startCall(String num) {
+        this.number = num;
+        updateNumberDisplay();
+        return startCall();
+    }
+
     public boolean startCall() {
         if (this.number.length() < 11) return false;
         try {

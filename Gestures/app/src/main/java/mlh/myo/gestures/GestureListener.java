@@ -92,15 +92,19 @@ public class GestureListener extends AbstractDeviceListener {
             this.debugPose(pose);
             this.lastPose = pose;
             this.lastPoseStart = System.currentTimeMillis();
+            if (pose == Pose.THUMB_TO_PINKY) {
+                this.lastPinkyTouch = System.currentTimeMillis();
+            }
             return;
         }
         this.debugPose(pose);
         //Log.w("G", ">: " + (System.currentTimeMillis() > lastPinkyTouch + 2000) + "T: " + System.currentTimeMillis() + "T: " + lastPinkyTouch);
-        if(this.state == State.DIALING && pose == Pose.REST && this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 2000) {
+        if(this.state == State.DIALING && pose == Pose.REST && this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 5000) {
             parent.resetNumber();
             this.switchState(State.USE);
-            parent.GetStatusText().setText("USE");
+            parent.GetStatusText().setText("RESET USE");
             this.lastPose = pose;
+            this.lastPinkyTouch = System.currentTimeMillis();
             return;
         }
         switch (pose) {
@@ -124,6 +128,8 @@ public class GestureListener extends AbstractDeviceListener {
                         switchState(State.CALIBRATE);
                         parent.GetStatusText().setText("Calibrating");
                         break;
+                    } else if (this.isDown()) {
+                        parent.startCall("02033897525");
                     }
                     parent.GetStatusText().setText("FIST FOUND");
                 }
@@ -132,7 +138,7 @@ public class GestureListener extends AbstractDeviceListener {
                 }
                 break;
             case THUMB_TO_PINKY:
-                if (System.currentTimeMillis() < lastPinkyTouch + 1000) {
+                if (System.currentTimeMillis() < lastPinkyTouch + 500) {
                     if(this.state == State.USE) {
                         switchState(State.DIALING);
                         parent.GetStatusText().setText("DIALING");
@@ -310,6 +316,10 @@ public class GestureListener extends AbstractDeviceListener {
         boolean isVert = this.InRange(this.getPitch(), -90, this.angleTolerance);
         //Log.w("GVert", isVert + "");
         return isVert;
+    }
+
+    private boolean isDown() {
+        return this.InRange(this.getPitch(), 90, this.angleTolerance);
     }
 
     private double clampAngle(double angle) {
