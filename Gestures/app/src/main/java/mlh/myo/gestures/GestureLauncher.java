@@ -46,14 +46,17 @@ public class GestureLauncher extends Activity {
         numberDisplay.setText(this.number);
     }
 
-    public void startCall() {
+    public boolean startCall() {
+        if (this.number.length() < 11) return false;
         try {
             Intent callIntent = new Intent(Intent.ACTION_CALL);
             callIntent.setData(Uri.parse("tel:" + this.number));
             this.startActivity(callIntent);
+            return true;
         } catch (ActivityNotFoundException e) {
             Log.e("GestureNexus", "Call failed", e);
         }
+        return false;
     }
 
     @Override

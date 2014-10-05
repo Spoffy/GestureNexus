@@ -53,6 +53,7 @@ public class GestureListener extends AbstractDeviceListener {
 
     private int lastNumber = 10;
     private boolean rollResetRequired = false;
+    private int count = 0;
 
     private DecimalFormat formatter = new DecimalFormat("###0.####");
 
@@ -86,6 +87,7 @@ public class GestureListener extends AbstractDeviceListener {
     @Override
     public void onPose(Myo myo, long timestamp, Pose pose) {
         long lastPoseLength = System.currentTimeMillis() - this.lastPoseStart;
+        Log.w("G", "Last pose: " + (this.lastPose == Pose.REST));
         if(this.lastPose != Pose.REST && pose != Pose.REST) {
             this.debugPose(pose);
             this.lastPose = pose;
@@ -93,23 +95,29 @@ public class GestureListener extends AbstractDeviceListener {
             return;
         }
         this.debugPose(pose);
-        Log.w("G", ">: " + (System.currentTimeMillis() > lastPinkyTouch + 2000) + "T: " + System.currentTimeMillis() + "T: " + lastPinkyTouch);
+        //Log.w("G", ">: " + (System.currentTimeMillis() > lastPinkyTouch + 2000) + "T: " + System.currentTimeMillis() + "T: " + lastPinkyTouch);
         if(this.state == State.DIALING && pose == Pose.REST && this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 2000) {
             parent.resetNumber();
             this.switchState(State.USE);
             parent.GetStatusText().setText("USE");
+            this.lastPose = pose;
             return;
         }
         switch (pose) {
             case WAVE_IN:
+                Log.w("G", "State: " + this.rollResetRequired);
+                if(this.state == State.DIALING && !this.rollResetRequired) {
+                    parent.removeDigit();
+                    break;
+                }
                 if (this.state == State.CALIBRATE) {
                     this.yawAdjust = this.yaw;
                     this.pitchAdjust = this.pitch;
                     this.rollAdjust = this.roll;
                     parent.GetStatusText().setText("Calibrated");
                     switchState(State.USE);
+                    break;
                 }
-                break;
             case FIST:
                 if (this.state == State.USE) {
                     if(this.isVertical()) {
@@ -118,7 +126,6 @@ public class GestureListener extends AbstractDeviceListener {
                         break;
                     }
                     parent.GetStatusText().setText("FIST FOUND");
-//                  startCall("07930562453");
                 }
                 if(this.state == State.DIALING) {
                     parent.addDigit(this.calcNumber());
@@ -130,19 +137,13 @@ public class GestureListener extends AbstractDeviceListener {
                         switchState(State.DIALING);
                         parent.GetStatusText().setText("DIALING");
                     } else if(this.state == State.DIALING) {
-                        parent.startCall();
-                        switchState(State.USE);
-                        parent.GetStatusText().setText("CALLING - USE");
+                        if(parent.startCall()) {
+                            switchState(State.USE);
+                            parent.GetStatusText().setText("CALLING - USE");
+                        }
                     }
                 }
                 this.lastPinkyTouch = System.currentTimeMillis();
-                break;
-            case WAVE_OUT:
-                if(this.state == State.DIALING) {
-                    parent.removeDigit();
-                    //
-                    //Log.w("Lol", "Removing digit");
-                }
                 break;
             default:
                 break;
@@ -200,17 +201,7 @@ public class GestureListener extends AbstractDeviceListener {
     }
 
     private void handleRollGesture() {
-        if (this.state != State.DIALING) return;
-        boolean inTriggerRange = false;
-        if(!this.InRange(this.getRoll(), 0, 40)) {
-            inTriggerRange = true;
-        }
-        if (rollResetRequired && !inTriggerRange) {
-            rollResetRequired = false;
-        } else if (!rollResetRequired && inTriggerRange) {
-            parent.addDigit(calcNumber());
-            rollResetRequired = true;
-        }
+
     }
 
     private boolean checkNumberChange() {
@@ -224,13 +215,26 @@ public class GestureListener extends AbstractDeviceListener {
         return retVal;
     }
 
-    /*@Override
-    public void onAccelerometerData(Myo myo, long timestamp, Vector3 accel) {
-        if (accel.x() < 0.5) return;
-        //Log.w("GestureNexus", "" + formatter.format(accel.x()) + " " + formatter.format(accel.y()) + " " + formatter.format(accel.z()));
-        //Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
-        int number = this.calcNumber();
-    }*/
+    @Override
+    public void onGyroscopeData(Myo myo, long timestamp, Vector3 accel) {
+        if (accel.x() > 50 || accel.y() > 150 || accel.z() > 150) {
+            //Log.w("GestureNexus", "" + formatter.format(accel.x()) + " " + formatter.format(accel.y()) + " " + formatter.format(accel.z()));
+        }
+               //Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
+        //int number = this.calcNumber();
+
+        if (this.state != State.DIALING) return;
+        boolean inTriggerRange = false;
+        if(accel.x() > 50) {
+            inTriggerRange = true;
+        }
+        if (rollResetRequired && !inTriggerRange) {
+            rollResetRequired = false;
+        } else if (!rollResetRequired && inTriggerRange) {
+            parent.addDigit(calcNumber());
+            rollResetRequired = true;
+        }
+    }
 
     private int calcNumber() {
         Quadrant horizontalQuad = Quadrant.UNKNOWN;
