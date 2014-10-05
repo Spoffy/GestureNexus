@@ -35,6 +35,12 @@ public class GestureLauncher extends Activity {
         updateNumberDisplay();
     }
 
+    public void removeDigit() {
+        if (number.length() == 0) return;
+        number = number.substring(0, number.length() - 1);
+        updateNumberDisplay();
+    }
+
     private void updateNumberDisplay() {
         TextView numberDisplay = (TextView) findViewById(R.id.number);
         numberDisplay.setText(this.number);

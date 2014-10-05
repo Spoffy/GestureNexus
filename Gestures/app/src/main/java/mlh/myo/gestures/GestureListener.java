@@ -31,6 +31,7 @@ public class GestureListener extends AbstractDeviceListener {
     private double angleTolerance = 20;
 
     private long lastPinkyTouch = 0;
+    private Pose lastPose = Pose.UNKNOWN;
 
     private enum State {
         CALIBRATE,
@@ -48,6 +49,9 @@ public class GestureListener extends AbstractDeviceListener {
         TOP,
         BOTTOM
     }
+
+    private int lastNumber = 10;
+    private boolean rollResetRequired = false;
 
     private DecimalFormat formatter = new DecimalFormat("###0.####");
 
@@ -80,6 +84,11 @@ public class GestureListener extends AbstractDeviceListener {
 
     @Override
     public void onPose(Myo myo, long timestamp, Pose pose) {
+        if(this.lastPose == Pose.THUMB_TO_PINKY && System.currentTimeMillis() > lastPinkyTouch + 2000) {
+            parent.resetNumber();
+            this.switchState(State.USE);
+            parent.GetStatusText().setText("USE");
+        }
         switch (pose) {
             case WAVE_IN:
                 if (this.state == State.CALIBRATE) {
@@ -111,22 +120,23 @@ public class GestureListener extends AbstractDeviceListener {
                         parent.GetStatusText().setText("DIALING");
                     } else if(this.state == State.DIALING) {
                         parent.startCall();
-                        //switchState(State.USE);
-                        parent.resetNumber();
-                        parent.GetStatusText().setText("CANCELLED DIAL");
+                        switchState(State.USE);
+                        parent.GetStatusText().setText("CALLING");
                     }
                 }
                 this.lastPinkyTouch = System.currentTimeMillis();
                 break;
-            case FINGERS_SPREAD:
+            case WAVE_OUT:
                 if(this.state == State.DIALING) {
-                    parent.startCall();
+                    parent.removeDigit();
+                    Log.w("Lol", "Removing digit");
                 }
                 break;
             default:
                 break;
         }
         this.debugPose(pose);
+        this.lastPose = pose;
     }
 
     private void debugPose(Pose pose) {
@@ -166,9 +176,40 @@ public class GestureListener extends AbstractDeviceListener {
             this.pitch *= -1;
         }
 
-        if(this.state == State.USE) {
-        //    Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
+
+        if(this.checkNumberChange()) {
+            myo.vibrate(Myo.VibrationType.SHORT);
         }
+
+        this.handleRollGesture();
+        //if(this.state == State.USE) {
+        //    Log.w("GestureNexus", "" + formatter.format(this.getYaw()) + " " + formatter.format(this.getPitch()) + " " + formatter.format(this.getRoll()));
+        //}
+    }
+
+    private void handleRollGesture() {
+        if (this.state != State.DIALING) return;
+        boolean inTriggerRange = false;
+        if(!this.InRange(this.getRoll(), 0, 40)) {
+            inTriggerRange = true;
+        }
+        if (rollResetRequired && !inTriggerRange) {
+            rollResetRequired = false;
+        } else if (!rollResetRequired && inTriggerRange) {
+            parent.addDigit(calcNumber());
+            rollResetRequired = true;
+        }
+    }
+
+    private boolean checkNumberChange() {
+        if (this.state != State.DIALING) return false;
+        boolean retVal = false;
+        int currentNumber = this.calcNumber();
+        if (currentNumber != this.lastNumber) {
+            retVal = true;
+        }
+        this.lastNumber = currentNumber;
+        return retVal;
     }
 
     /*@Override
@@ -234,8 +275,6 @@ public class GestureListener extends AbstractDeviceListener {
                 }
                 break;
         }
-
-        Log.e("Quads", "H: " + horizontalQuad + "V: " + verticalQuad);
         return 0;
     }
 
@@ -273,7 +312,7 @@ public class GestureListener extends AbstractDeviceListener {
         double upperBound = clampAngle(point + tolerance);
         point = clampAngle(point);
         value = clampAngle(value);
-        Log.w("GestureNexus", "" + formatter.format(lowerBound) + " " + formatter.format(value) + " " + formatter.format(upperBound));
+        //Log.w("GestureNexus", "" + formatter.format(lowerBound) + " " + formatter.format(value) + " " + formatter.format(upperBound));
         return (value > lowerBound && value < upperBound) || (upperBound < lowerBound && (value < upperBound || value > lowerBound) );
     }
 }
